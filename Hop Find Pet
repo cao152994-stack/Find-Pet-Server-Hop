@@ -6,7 +6,7 @@ local player = Players.LocalPlayer
 local API_URL = "https://fruit-api.cao152994.workers.dev/get"
 
 -- =========================
--- UI SETUP
+-- TẠO GIAO DIỆN
 -- =========================
 local gui = Instance.new("ScreenGui")
 gui.Name = "PetListUI"
@@ -18,18 +18,24 @@ main.Position = UDim2.new(0.5, -225, 0.5, -250)
 main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 main.Parent = gui
 
+-- Tạo container riêng cho danh sách pet
+local petContainer = Instance.new("Frame")
+petContainer.Size = UDim2.new(1, 0, 1, 0)
+petContainer.BackgroundTransparency = 1
+petContainer.Parent = main
+
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 8)
-layout.Parent = main
+layout.Parent = petContainer
 
 -- =========================
--- CREATE CARD
+-- TẠO THẺ PET
 -- =========================
-local function CreatePetCard(pet)
+local function TaoThePet(pet)
 	local card = Instance.new("Frame")
 	card.Size = UDim2.new(1, 0, 0, 120)
 	card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	card.Parent = main
+	card.Parent = petContainer
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(1, -10, 0, 80)
@@ -43,7 +49,7 @@ local function CreatePetCard(pet)
 	label.Parent = card
 
 	label.Text = string.format(
-		"Name: %s\nPrice: %s\nRarity: %s\nLife Time: %s",
+		"Tên: %s\nGiá: %s\nĐộ hiếm: %s\nThời gian sống: %s",
 		pet.Name,
 		pet.Price,
 		pet.Rarity,
@@ -53,61 +59,62 @@ local function CreatePetCard(pet)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(0.3, 0, 0, 28)
 	btn.Position = UDim2.new(0.35, 0, 0.78, 0)
-	btn.Text = "Join"
+	btn.Text = "Tham gia"
 	btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 	btn.Parent = card
 
 	btn.MouseButton1Click:Connect(function()
-		print("Clicked pet:", pet.Name)
+		print("Đã click pet:", pet.Name)
 	end)
 end
 
-local function LoadPets()
-	local success, result = pcall(function()
+local function TaiDanhSachPet()
+	local thanhCong, ketQua = pcall(function()
 		return HttpService:GetAsync(API_URL)
 	end)
 
-	if not success then
-		warn("HTTP FAILED:", result)
+	if not thanhCong then
+		warn("LỖI HTTP:", ketQua)
 		return
 	end
 
-	print("RAW:", result)
+	print("DỮ LIỆU THÔ:", ketQua)
 
-	local ok, data = pcall(function()
-		return HttpService:JSONDecode(result)
+	local ok, duLieu = pcall(function()
+		return HttpService:JSONDecode(ketQua)
 	end)
 
 	if not ok then
-		warn("JSON FAILED:", data)
+		warn("LỖI JSON:", duLieu)
 		return
 	end
 
-	-- 🔥 FIX: lấy đúng list
-	local list = data
+	-- Lấy đúng danh sách
+	local danhSach = duLieu
 
-	if typeof(data) == "table" and data.events then
-		list = data.events
-	elseif typeof(data) == "table" and data.data then
-		list = data.data
+	if typeof(duLieu) == "table" and duLieu.events then
+		danhSach = duLieu.events
+	elseif typeof(duLieu) == "table" and duLieu.data then
+		danhSach = duLieu.data
 	end
 
-	if typeof(list) ~= "table" then
-		warn("NO VALID LIST")
+	if typeof(danhSach) ~= "table" then
+		warn("KHÔNG CÓ DANH SÁCH HỢP LỆ")
 		return
 	end
 
-	-- clear UI đúng cách
-	for _, v in ipairs(main:GetChildren()) do
+	-- Xóa thẻ cũ trong petContainer
+	for _, v in ipairs(petContainer:GetChildren()) do
 		if v:IsA("Frame") then
 			v:Destroy()
 		end
 	end
 
-	for _, pet in ipairs(list) do
-		CreatePetCard({
-			Name = pet.Name or pet.PetName or "Unknown",
+	-- Tạo thẻ mới
+	for _, pet in ipairs(danhSach) do
+		TaoThePet({
+			Name = pet.Name or pet.PetName or "Không rõ",
 			Price = pet.Price or "?",
 			Rarity = pet.Rarity or "?",
 			LifeTime = pet.TimeLife or pet.LifeTime or "?"
@@ -116,10 +123,10 @@ local function LoadPets()
 end
 
 -- =========================
--- AUTO REFRESH (optional)
+-- TẢI VÀ TỰ ĐỘNG CẬP NHẬT
 -- =========================
-LoadPets()
+TaiDanhSachPet()
 
 while task.wait(10) do
-	LoadPets()
+	TaiDanhSachPet()
 end
