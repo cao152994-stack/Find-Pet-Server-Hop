@@ -69,32 +69,49 @@ local function LoadPets()
 	end)
 
 	if not success then
-		warn("❌ HTTP FAILED:", result)
+		warn("HTTP FAILED:", result)
 		return
 	end
 
-	print("📦 RAW RESPONSE:")
-	print(result)
+	print("RAW:", result)
 
-	local decodeSuccess, data = pcall(function()
+	local ok, data = pcall(function()
 		return HttpService:JSONDecode(result)
 	end)
 
-	if not decodeSuccess then
-		warn("❌ JSON FAILED:", data)
+	if not ok then
+		warn("JSON FAILED:", data)
 		return
 	end
 
-	print("✅ DECODED DATA TYPE:", typeof(data))
-	print(data)
+	-- 🔥 FIX: lấy đúng list
+	local list = data
 
-	if typeof(data) ~= "table" then
-		warn("❌ API is not a table!")
+	if typeof(data) == "table" and data.events then
+		list = data.events
+	elseif typeof(data) == "table" and data.data then
+		list = data.data
+	end
+
+	if typeof(list) ~= "table" then
+		warn("NO VALID LIST")
 		return
 	end
 
-	for i, v in ipairs(data) do
-		print("PET:", v.Name, v.Price, v.Rarity, v.TimeLife)
+	-- clear UI đúng cách
+	for _, v in ipairs(main:GetChildren()) do
+		if v:IsA("Frame") then
+			v:Destroy()
+		end
+	end
+
+	for _, pet in ipairs(list) do
+		CreatePetCard({
+			Name = pet.Name or pet.PetName or "Unknown",
+			Price = pet.Price or "?",
+			Rarity = pet.Rarity or "?",
+			LifeTime = pet.TimeLife or pet.LifeTime or "?"
+		})
 	end
 end
 
