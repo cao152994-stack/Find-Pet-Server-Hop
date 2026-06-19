@@ -1,0 +1,108 @@
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+
+local API_URL = "https://fruit-api.cao152994.workers.dev/get"
+
+-- =========================
+-- UI SETUP
+-- =========================
+local gui = Instance.new("ScreenGui")
+gui.Name = "PetListUI"
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 450, 0, 500)
+main.Position = UDim2.new(0.5, -225, 0.5, -250)
+main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+main.Parent = gui
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 8)
+layout.Parent = main
+
+-- =========================
+-- CREATE CARD
+-- =========================
+local function CreatePetCard(pet)
+	local card = Instance.new("Frame")
+	card.Size = UDim2.new(1, 0, 0, 120)
+	card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	card.Parent = main
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -10, 0, 80)
+	label.Position = UDim2.new(0, 5, 0, 5)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.TextYAlignment = Enum.TextYAlignment.Top
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 16
+	label.Parent = card
+
+	label.Text = string.format(
+		"Name: %s\nPrice: %s\nRarity: %s\nLife Time: %s",
+		pet.Name,
+		pet.Price,
+		pet.Rarity,
+		pet.LifeTime
+	)
+
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.3, 0, 0, 28)
+	btn.Position = UDim2.new(0.35, 0, 0.78, 0)
+	btn.Text = "Join"
+	btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Parent = card
+
+	btn.MouseButton1Click:Connect(function()
+		print("Clicked pet:", pet.Name)
+	end)
+end
+
+local function LoadPets()
+	local success, result = pcall(function()
+		return HttpService:GetAsync(API_URL)
+	end)
+
+	if not success then
+		warn("❌ HTTP FAILED:", result)
+		return
+	end
+
+	print("📦 RAW RESPONSE:")
+	print(result)
+
+	local decodeSuccess, data = pcall(function()
+		return HttpService:JSONDecode(result)
+	end)
+
+	if not decodeSuccess then
+		warn("❌ JSON FAILED:", data)
+		return
+	end
+
+	print("✅ DECODED DATA TYPE:", typeof(data))
+	print(data)
+
+	if typeof(data) ~= "table" then
+		warn("❌ API is not a table!")
+		return
+	end
+
+	for i, v in ipairs(data) do
+		print("PET:", v.Name, v.Price, v.Rarity, v.TimeLife)
+	end
+end
+
+-- =========================
+-- AUTO REFRESH (optional)
+-- =========================
+LoadPets()
+
+while task.wait(10) do
+	LoadPets()
+end
